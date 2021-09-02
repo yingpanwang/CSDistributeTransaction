@@ -1,5 +1,6 @@
 using CSDistributeTransaction.Core.Tcc;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -11,17 +12,14 @@ namespace TestProject2
         [Fact]
         public async void Test1()
         {
-            TccTransactionManager manager = new TccTransactionManager();
+            var list = new List<TccTransactionStep<object>>();
+            list.Add(new TccTransactionStep1());
+            list.Add(new TccTransactionStep2());
 
-            var tid = Guid.NewGuid().ToString();
+            TccTransaction trans = new TccTransaction(Guid.NewGuid(), list);
 
-            await manager
-               .Start(tid)
-               .With<TccTransactionStep1, object>(new { Name = "1111" })
-               .With<TccTransactionStep2, object>(new { Name = "2222" })
-               .ExecuteAsync();
-
-            Assert.True(true);
+            await trans.ExecuteAsync();
+            
         }
     }
 
@@ -56,6 +54,7 @@ namespace TestProject2
 
         public override Task Confirm()
         {
+            throw new NotImplementedException();
             Console.WriteLine("TccTransactionStep2 Confirm");
             return Task.CompletedTask;
         }
@@ -66,5 +65,6 @@ namespace TestProject2
             return Task.CompletedTask;
         }
     }
+
 }
 
