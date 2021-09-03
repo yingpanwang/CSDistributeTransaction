@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CSDistributeTransaction.Core.Abstract
@@ -20,7 +21,7 @@ namespace CSDistributeTransaction.Core.Abstract
             this.TransactionId = key;
         }
 
-        public abstract Task ExecuteAsync();
+        public abstract Task<bool> ExecuteAsync();
         public abstract Task CancelAsync();
 
     }

@@ -10,9 +10,6 @@ namespace CSDistributeTransaction.Core.Tcc
 {
     public class TccTransactionManager
     {
-        public TccTransaction StartNew(Guid tid) 
-        {
-            return new TccTransaction(tid,null);
-        }
+        
     }
 }
