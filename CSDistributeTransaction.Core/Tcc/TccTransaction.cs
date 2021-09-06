@@ -1,4 +1,5 @@
 ﻿using CSDistributeTransaction.Core.Abstract;
+using CSDistributeTransaction.Core.Tcc.Interface;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -12,49 +13,85 @@ namespace CSDistributeTransaction.Core.Tcc
     public class TccTransaction:DistributeTransactionBase<Guid>
     {
         private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly ILogger<TccTransaction> _logger;
         private CancellationToken _tryCancellationToken;
         private CancellationToken _confirmCancellationToken;
         public DistributeTransactionStatus Status { get; private set; }
-        public IEnumerable<TccTransactionStep<object>> TccTransactionSteps { get; private set; }
-        public TccTransaction(Guid key,IEnumerable<TccTransactionStep<object>> steps) 
+        public IEnumerable<ITccTransactionStep> TccTransactionSteps { get; private set; }
+        
+        
+        public TccTransaction(Guid key,IEnumerable<ITccTransactionStep> steps,
+            ILoggerFactory loggerFactory) 
             :base(key)
         {
             this.TccTransactionSteps = steps ?? new List<TccTransactionStep<object>>();
-            
+            if(loggerFactory!=null)
+                _logger = loggerFactory.CreateLogger<TccTransaction>();
+
             _tryCancellationToken = new CancellationToken();
             _confirmCancellationToken = new CancellationToken();
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_tryCancellationToken, _confirmCancellationToken);
         }
 
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="steps"></param>
+        /// <param name="cancellationToken"></param>
+        /// <param name="loggerFactory"></param>
+        public TccTransaction(Guid key, IEnumerable<ITccTransactionStep> steps,
+            CancellationToken cancellationToken,ILoggerFactory loggerFactory)
+            : base(key)
+        {
+            this.TccTransactionSteps = steps ?? new List<ITccTransactionStep>();
+            if(loggerFactory != null)
+                _logger = loggerFactory.CreateLogger<TccTransaction>();
+
+            _tryCancellationToken = new CancellationToken();
+            _confirmCancellationToken = new CancellationToken();
+
+            if (cancellationToken == null)
+                cancellationToken = new CancellationToken();
+            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_tryCancellationToken, _confirmCancellationToken,cancellationToken);
+        }
+
+
         public override async Task<bool> ExecuteAsync()
         {
-            this.Status = DistributeTransactionStatus.Pending;
-
-            var step = TccTransactionSteps.ToList();
-            //_logger?.LogInformation($"事务开始:{this.TransactionId.ToString()}");
-            var toeken = _cancellationTokenSource.Token;
-            toeken.Register(async ()=> 
+            using (_logger?.BeginScope("TransactionId:{0}", this.TransactionId))
             {
-                 this.Status = DistributeTransactionStatus.Canceled;
-                 await CancelAsync();
-            });
+                _logger?.LogInformation($"事务开始:{this.TransactionId.ToString()}");
 
-            _cancellationTokenSource.CancelAfter(3000);
+                var step = TccTransactionSteps.ToList();
+                var toeken = _cancellationTokenSource.Token;
+                toeken.Register(async () =>
+                {
+                    await CancelAsync();
+                });
 
-            await TryExecute(step,_tryCancellationToken);
+                _cancellationTokenSource.CancelAfter(10000);
+                
+                _logger?.LogInformation($"尝试执行事务:{this.TransactionId.ToString()}");
+                await TryExecute(step, _tryCancellationToken);
+
+                if (this.Status != DistributeTransactionStatus.Pending)
+                    return false;
+
+                _logger?.LogInformation($"确认执行事务:{this.TransactionId.ToString()}");
+                await ConfirmExecute(step, _confirmCancellationToken);
+                if (this.Status != DistributeTransactionStatus.Confirmed)
+                    return false;
+
+                _cancellationTokenSource.Dispose();
+                return true;
+            }
             
-            this.Status = DistributeTransactionStatus.Pending;
-
-            await ConfirmExecute(step,_confirmCancellationToken);
-            
-            this.Status = DistributeTransactionStatus.Confirmed;
-
-            return true;
         }
 
         public override async Task CancelAsync()
         {
-            //_logger?.LogInformation($"事务取消:{this.TransactionId.ToString()}");
+            _logger?.LogInformation($"事务取消:{this.TransactionId.ToString()}");
 
             bool canceled = false;
             int retryCount = 0;
@@ -71,6 +108,7 @@ namespace CSDistributeTransaction.Core.Tcc
                     }
                     
                     canceled = true;
+                    this.Status = DistributeTransactionStatus.Canceled;
                     break;
                     
                 }
@@ -90,26 +128,47 @@ namespace CSDistributeTransaction.Core.Tcc
             }
         }
 
-        private async Task ConfirmExecute(IEnumerable<TccTransactionStep<object>> confirmSteps, CancellationToken cancellationToken)
+        private async Task ConfirmExecute(IEnumerable<ITccTransactionStep> confirmSteps, CancellationToken cancellationToken)
         {
-            foreach (var step in confirmSteps)
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                await step.Confirm();
-            }
-        }
-        private async Task TryExecute(IEnumerable<TccTransactionStep<object>> trySteps, CancellationToken cancellationToken)
-        {
-            foreach (var step in trySteps)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (this.Status != DistributeTransactionStatus.Canceled)
+                foreach (var step in confirmSteps)
                 {
-                    await step.Try();
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await step.Confirm();
                 }
+
+                this.Status = DistributeTransactionStatus.Confirmed;
+            }
+            catch (System.Exception)
+            {
+                _cancellationTokenSource.Cancel();
+                Status = DistributeTransactionStatus.Canceled;
+                return;
             }
         }
 
+        private async Task TryExecute(IEnumerable<ITccTransactionStep> trySteps, CancellationToken cancellationToken)
+        {
+            try
+            {
+                foreach (var step in trySteps)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (this.Status != DistributeTransactionStatus.Canceled)
+                    {
+                        await step.Try();
+                    }
+                }
 
+                this.Status = DistributeTransactionStatus.Pending;
+            }
+            catch (System.Exception)
+            {
+                _cancellationTokenSource.Cancel();
+                Status = DistributeTransactionStatus.Canceled;
+                return;
+            }
+        }
     }
 }

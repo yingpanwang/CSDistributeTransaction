@@ -8,7 +8,7 @@ namespace CSDistributeTransaction.Core
     public class DistributeTransactionStepAttribute:Attribute
     {
         public object State { get; private set; }
-        public DistributeTransactionStepAttribute(object state = null)
+        public DistributeTransactionStepAttribute(object state)
         {
             this.State = state;
         }

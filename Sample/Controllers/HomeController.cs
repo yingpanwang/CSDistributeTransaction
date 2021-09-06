@@ -2,6 +2,7 @@
 using CSDistributeTransaction.Core.Tcc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,14 +17,14 @@ namespace Sample.Controllers
     {
 
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> Get([FromServices]ILoggerFactory loggerFactory,CancellationToken cancellationToken)
         {
 
             var list = new List<TccTransactionStep<object>>();
             list.Add(new CreateOrderStep());
             list.Add(new ReduceStockStep());
             
-            TccTransaction t = new TccTransaction(Guid.NewGuid(), list);
+            TccTransaction t = new TccTransaction(Guid.NewGuid(), list,cancellationToken,loggerFactory);
 
             await t.ExecuteAsync();
             
@@ -32,7 +33,7 @@ namespace Sample.Controllers
 
     }
 
-    [DistributeTransactionStep]
+    [DistributeTransactionStep(null)]
     public class PayStep 
     {
     
@@ -42,6 +43,7 @@ namespace Sample.Controllers
     {
         public override Task Cancel()
         {
+            
             Console.WriteLine("取消添加库存");
             return Task.CompletedTask;
         }
@@ -56,7 +58,6 @@ namespace Sample.Controllers
         {
             Console.WriteLine("尝试添加库存");
 
-            throw new NotImplementedException();
             return Task.CompletedTask;
         }
     }

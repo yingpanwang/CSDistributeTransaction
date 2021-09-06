@@ -1,4 +1,5 @@
 using CSDistributeTransaction.Core.Tcc;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -16,7 +17,8 @@ namespace TestProject2
             list.Add(new TccTransactionStep1());
             list.Add(new TccTransactionStep2());
 
-            TccTransaction trans = new TccTransaction(Guid.NewGuid(), list);
+            ILoggerFactory loggerFactory= new LoggerFactory();
+            TccTransaction trans = new TccTransaction(Guid.NewGuid(), list,loggerFactory);
 
             await trans.ExecuteAsync();
             
