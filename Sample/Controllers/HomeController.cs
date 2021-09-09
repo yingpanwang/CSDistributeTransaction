@@ -3,6 +3,8 @@ using CSDistributeTransaction.Core.Tcc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Sample.Services;
+using Sample.Store;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,114 +17,39 @@ namespace Sample.Controllers
     [ApiController]
     public class HomeController : ControllerBase
     {
+        private readonly TccTransactionManager _tccTransactionManager;
+        public HomeController(TccTransactionManager tccTransactionManager) 
+        {
+            _tccTransactionManager = tccTransactionManager;
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> Get([FromServices]ILoggerFactory loggerFactory,CancellationToken cancellationToken)
         {
 
             var list = new List<TccTransactionStep<object>>();
-            list.Add(new CreateOrderStep());
-            list.Add(new ReduceStockStep());
-            
-            TccTransaction t = new TccTransaction(Guid.NewGuid(), list,cancellationToken,loggerFactory);
+            //list.Add(new CreateOrderStep());
+            //list.Add(new ReduceStockStep());
 
-            await t.ExecuteAsync();
-            
+            //TccTransaction t = new TccTransaction(Guid.NewGuid(), list,cancellationToken,loggerFactory);
+            //TccTransaction trans = new TccTransaction(Guid.NewGuid(), list, cancellationToken, loggerFactory);
+
+            var trans = _tccTransactionManager
+                .Create()
+                .WithStep<ReduceStockStep, ReduceStockState>(new ReduceStockState()
+                {
+                    GoodsId = 1.ToString(),
+                    OrderId = Guid.NewGuid().ToString(),
+                    ReduceCount = 10
+                })
+                .ExecuteAsync();
+
+            await trans;
+
             return Ok();
         }
 
     }
 
-    [DistributeTransactionStep(null)]
-    public class PayStep 
-    {
-    
-    }
-
-    public class ReduceStockStep : TccTransactionStep<object>
-    {
-        public override Task Cancel()
-        {
-            
-            Console.WriteLine("取消添加库存");
-            return Task.CompletedTask;
-        }
-
-        public override Task Confirm()
-        {
-            Console.WriteLine("确认添加库存");
-            return Task.CompletedTask;
-        }
-
-        public override Task Try()
-        {
-            Console.WriteLine("尝试添加库存");
-
-            return Task.CompletedTask;
-        }
-    }
-
-    public class CreateOrderStep : TccTransactionStep<object>
-    {
-        public override Task Cancel()
-        {
-            Console.WriteLine("取消添加订单");
-            return Task.CompletedTask;
-        }
-
-        public override Task Confirm()
-        {
-            Console.WriteLine("确认添加订单");
-            return Task.CompletedTask;
-        }
-
-        public override Task Try()
-        {
-            Console.WriteLine("尝试添加订单");
-            return Task.CompletedTask;
-        }
-    }
-
-    public class TccTransactionStep1 : TccTransactionStep<object>
-    {
-        public override Task Cancel()
-        {
-            Console.WriteLine("TccTransactionStep1 Cancel");
-            return Task.CompletedTask;
-        }
-
-        public override Task Confirm()
-        {
-            Console.WriteLine("TccTransactionStep1 Confirm");
-            return Task.CompletedTask;
-        }
-
-        public override Task Try()
-        {
-            Console.WriteLine("TccTransactionStep1 Try");
-            return Task.CompletedTask;
-        }
-    }
-
-    public class TccTransactionStep2 : TccTransactionStep<object>
-    {
-        public override Task Cancel()
-        {
-            Console.WriteLine("TccTransactionStep2 Cancel");
-            return Task.CompletedTask;
-        }
-
-        public override Task Confirm()
-        {
-            throw new NotImplementedException();
-            Console.WriteLine("TccTransactionStep2 Confirm");
-            return Task.CompletedTask;
-        }
-
-        public override Task Try()
-        {
-            Console.WriteLine("TccTransactionStep2 Try");
-            return Task.CompletedTask;
-        }
-    }
 }

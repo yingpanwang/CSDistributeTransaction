@@ -1,3 +1,5 @@
+using CSDistributeTransaction.Core.Option;
+using CSDistributeTransaction.Core.Tcc;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -6,6 +8,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Sample.Services;
+using Sample.Store;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,7 +29,13 @@ namespace Sample
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            
+            services.AddScoped<ReduceStockStep, ReduceStockStep>();
+
+            services.AddScoped(typeof(IStore<>),typeof(InMemeryStore<>));
+
+            services.AddScoped<StockService,StockService>();
+            services.AddScoped<TccTransactionOption, TccTransactionOption>();
+            services.AddScoped<TccTransactionManager, TccTransactionManager>();
             services.AddLogging(config=> 
             {
                 config.AddConsole();

@@ -2,6 +2,7 @@ using CSDistributeTransaction.Core.Tcc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -18,7 +19,8 @@ namespace TestProject2
             list.Add(new TccTransactionStep2());
 
             ILoggerFactory loggerFactory= new LoggerFactory();
-            TccTransaction trans = new TccTransaction(Guid.NewGuid(), list,loggerFactory);
+            
+            TccTransaction trans = new TccTransaction(Guid.NewGuid(), list,CancellationToken.None, loggerFactory);
 
             await trans.ExecuteAsync();
             

@@ -361,3 +361,10 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+.vscode/tasks.json
+.vscode/launch.json
+.idea/.idea.CSDistributeTransaction/.idea/workspace.xml
+.idea/.idea.CSDistributeTransaction/.idea/vcs.xml
+.idea/.idea.CSDistributeTransaction/.idea/projectSettingsUpdater.xml
+.idea/.idea.CSDistributeTransaction/.idea/indexLayout.xml
+.idea/.idea.CSDistributeTransaction/.idea/encodings.xml

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CSDistributeTransaction.Core.Abstract
 {
-    public abstract class DistributeTransactionBase<TKey> : IDistributeTransaction 
+    public abstract class DistributeTransactionBase<TKey> : IDistributeTransaction
     {
 
         /// <summary>

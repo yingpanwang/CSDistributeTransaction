@@ -8,6 +8,7 @@ namespace CSDistributeTransaction.Core.Tcc
 {
     public abstract class TccTransactionStep<TState>:ITccTransactionStep
     {
+
         public TState State { get; set; }
 
         public abstract Task Cancel();
