@@ -37,7 +37,7 @@ namespace Sample.Services
         {
             var stock = _store.Get(x=>x.GoodsId == State.GoodsId).FirstOrDefault();
             if (stock == null)
-                throw new Exception("商品不存在");
+                throw new Exception("?????????");
 
             var record = stock.Records.FirstOrDefault(x=>x.OrderId == State.OrderId);
             stock.Records.Remove(record);
@@ -49,14 +49,14 @@ namespace Sample.Services
         {
             var stock = _store.Get(x => x.GoodsId == State.GoodsId).FirstOrDefault();
             if (stock == null)
-                throw new Exception("商品不存在");
+                throw new Exception("库存不存在");
 
             stock.TotalStock -= State.ReduceCount;
             var record = stock.Records.FirstOrDefault(x=>x.OrderId == State.OrderId && 
                                             x.Status == Enum.StockRecordStatus.Frozen &&
                                             x.Type == Enum.StockRecordType.Reduce);
             if (record == null)
-                throw new Exception("扣减库存失败!");
+                throw new Exception("获取信息错误");
 
 
             record.Status = Enum.StockRecordStatus.Normal;
@@ -76,7 +76,7 @@ namespace Sample.Services
 
             if (stock.TotalStock <= frozenStock || (stock.TotalStock - frozenStock - State.ReduceCount < 0))
                 throw new Exception("库存不足");
-
+            
             var records = stock.Records;
             records.Add(new StockRecord()
             {

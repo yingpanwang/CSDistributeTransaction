@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Sample.Entity;
 using Sample.Services;
 using Sample.Store;
 using System;
@@ -30,7 +31,7 @@ namespace Sample
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddScoped<ReduceStockStep, ReduceStockStep>();
-
+            services.AddScoped<PlaceOrderStep, PlaceOrderStep>();
             services.AddScoped(typeof(IStore<>),typeof(InMemeryStore<>));
 
             services.AddScoped<StockService,StockService>();
@@ -50,7 +51,24 @@ namespace Sample
             {
                 app.UseDeveloperExceptionPage();
             }
-            
+            using (var scope = app.ApplicationServices.CreateScope())
+            {
+               
+                var store = scope.ServiceProvider.GetService<IStore<Stock>>();
+
+                for (int i = 0; i < 10; i++)
+                {
+                    store.Add(new Stock()
+                    {
+                        CreateDate = DateTime.Now,
+                        GoodsId = i.ToString(),
+                        Id = Guid.NewGuid().ToString(),
+                        Records = new List<StockRecord>(),
+                        TotalStock = 99
+                    });
+                }
+            }
+           
             app.UseHttpsRedirection();
 
             app.UseRouting();

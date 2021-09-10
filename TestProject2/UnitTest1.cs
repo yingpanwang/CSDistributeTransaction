@@ -14,15 +14,15 @@ namespace TestProject2
         [Fact]
         public async void Test1()
         {
-            var list = new List<TccTransactionStep<object>>();
-            list.Add(new TccTransactionStep1());
-            list.Add(new TccTransactionStep2());
+            //var list = new List<TccTransactionStep<object>>();
+            //list.Add(new TccTransactionStep1());
+            //list.Add(new TccTransactionStep2());
 
-            ILoggerFactory loggerFactory= new LoggerFactory();
+            //ILoggerFactory loggerFactory= new LoggerFactory();
             
-            TccTransaction trans = new TccTransaction(Guid.NewGuid(), list,CancellationToken.None, loggerFactory);
+            //TccTransaction trans = new TccTransaction(Guid.NewGuid(), list,CancellationToken.None, loggerFactory);
 
-            await trans.ExecuteAsync();
+            //await trans.ExecuteAsync();
             
         }
     }

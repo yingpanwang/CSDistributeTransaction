@@ -3,6 +3,7 @@ using CSDistributeTransaction.Core.Tcc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Sample.Entity;
 using Sample.Services;
 using Sample.Store;
 using System;
@@ -18,9 +19,11 @@ namespace Sample.Controllers
     public class HomeController : ControllerBase
     {
         private readonly TccTransactionManager _tccTransactionManager;
-        public HomeController(TccTransactionManager tccTransactionManager) 
+        private readonly IStore<Stock> _store;
+        public HomeController(TccTransactionManager tccTransactionManager,IStore<Stock> store) 
         {
             _tccTransactionManager = tccTransactionManager;
+            _store = store;
         }
 
 
@@ -35,17 +38,61 @@ namespace Sample.Controllers
             //TccTransaction t = new TccTransaction(Guid.NewGuid(), list,cancellationToken,loggerFactory);
             //TccTransaction trans = new TccTransaction(Guid.NewGuid(), list, cancellationToken, loggerFactory);
 
-            var trans = _tccTransactionManager
-                .Create()
-                .WithStep<ReduceStockStep, ReduceStockState>(new ReduceStockState()
-                {
-                    GoodsId = 1.ToString(),
-                    OrderId = Guid.NewGuid().ToString(),
-                    ReduceCount = 10
-                })
-                .ExecuteAsync();
+            Parallel.For(0, 10,async (i) => 
+            {
+                Console.WriteLine("p:"+i);
+                string orderId = Guid.NewGuid().ToString();
 
-            await trans;
+                var trans = _tccTransactionManager
+                    .Create()
+                    .WithStep<PlaceOrderStep, PlaceOrderStepState>(new PlaceOrderStepState()
+                    {
+                        CreatorId = Guid.NewGuid().ToString(),
+                        OrderId = orderId
+                    })
+                    .WithStep<ReduceStockStep, ReduceStockState>(new ReduceStockState()
+                    {
+                        GoodsId = i.ToString(),
+                        OrderId = orderId,
+                        ReduceCount = 10
+                    })
+                    .ExecuteAsync();
+
+                await trans;
+            });
+
+            for (int i = 0; i < 10; i++)
+            {
+                
+                string orderId = Guid.NewGuid().ToString();
+
+                var trans = _tccTransactionManager
+                    .Create()
+                    .WithStep<PlaceOrderStep, PlaceOrderStepState>(new PlaceOrderStepState()
+                    {
+                        CreatorId = Guid.NewGuid().ToString(),
+                        OrderId = orderId
+                    })
+                    .WithStep<ReduceStockStep, ReduceStockState>(new ReduceStockState()
+                    {
+                        GoodsId = i.ToString(),
+                        OrderId = orderId,
+                        ReduceCount = 10
+                    })
+                    .ExecuteAsync();
+                
+                await trans;
+            }
+
+            var istore = _store as InMemeryStore<Stock>;
+
+            foreach (var x in istore.Get(x=> 1==1))
+            {
+                decimal total = x.TotalStock;
+                decimal frozen = x.Records.Where(x=>x.Status == Enum.StockRecordStatus.Frozen).Sum(x=>x.Count);
+                decimal normal = x.Records.Where(x=>x.Status == Enum.StockRecordStatus.Normal).Sum(x=>x.Count);
+                Console.WriteLine($"total :  {total} frozen :{frozen} normal:{normal}");
+            }
 
             return Ok();
         }

@@ -25,6 +25,8 @@ namespace CSDistributeTransaction.Core.Tcc
         
         // 日志
         private readonly ILogger<TccTransaction> _logger = default!;
+
+        private readonly IServiceProvider _serviceProvider;
         
         /// <summary>
         /// 事务状态
@@ -37,24 +39,6 @@ namespace CSDistributeTransaction.Core.Tcc
         public IEnumerable<ITccTransactionStep> TccTransactionSteps { get; set; }
         
         /// <summary>
-        /// 默认构造
-        /// </summary>
-        /// <param name="key">事务id</param>
-        /// <param name="steps">事务步骤</param>
-        public TccTransaction(Guid key,IEnumerable<ITccTransactionStep> steps) 
-            :base(key)
-        {
-            this.TccTransactionSteps = steps ?? new List<TccTransactionStep<object>>();
-            
-            // 使用default！后
-            // _tryCancellationTokenSource = new CancellationTokenSource();
-            // _confirmCancellationTokenSource = new CancellationTokenSource();
-            
-            //关联各阶段令牌 
-            _mainCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_tryCancellationTokenSource.Token,_confirmCancellationTokenSource.Token);
-        }
-
-        /// <summary>
         /// 构造函数
         /// </summary>
         /// <param name="key">事务id</param>
@@ -62,12 +46,13 @@ namespace CSDistributeTransaction.Core.Tcc
         /// <param name="cancellationToken">外部取消令牌</param>
         /// <param name="loggerFactory">日志</param>
         public TccTransaction(Guid key, IEnumerable<ITccTransactionStep> steps,
-            CancellationToken cancellationToken,ILoggerFactory loggerFactory)
+            CancellationToken cancellationToken,ILoggerFactory loggerFactory,
+            IServiceProvider serviceProvider)
             : base(key)
         {
             // 初始化事务步骤列表
             this.TccTransactionSteps = steps ?? new List<ITccTransactionStep>();
-
+            _serviceProvider = serviceProvider;
             // 初始化日志
             _logger = loggerFactory.CreateLogger<TccTransaction>();
             
@@ -76,6 +61,25 @@ namespace CSDistributeTransaction.Core.Tcc
             _confirmCancellationTokenSource = new CancellationTokenSource();
             _mainCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_tryCancellationTokenSource.Token,_confirmCancellationTokenSource.Token,cancellationToken);
         }
+
+
+        public TccTransaction WithStep<TStep, TState>(TState state) where TStep : ITccTransactionStep
+        {
+            var step = _serviceProvider.GetService(typeof(TStep));
+            if (step == null)
+                throw new System.Exception("Step不存在");
+
+            var target = step as TccTransactionStep<TState>;
+
+            if (target == null)
+                throw new System.Exception("Step不存在");
+
+            target.State = state;
+
+            this.TccTransactionSteps = this.TccTransactionSteps.Append(target);
+            return this;
+        }
+
 
         /// <summary>
         /// 事务执行
