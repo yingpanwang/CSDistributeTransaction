@@ -22,7 +22,8 @@ namespace CSDistributeTransaction.Core.Tcc
         
         // “confirm阶段"任务取消令牌
         private readonly CancellationTokenSource _confirmCancellationTokenSource = default!;
-        
+
+        private readonly IDistributedTransactionRepository<TccTransaction> _transactionRepository;
         // 日志
         private readonly ILogger<TccTransaction> _logger = default!;
 
@@ -53,6 +54,9 @@ namespace CSDistributeTransaction.Core.Tcc
             // 初始化事务步骤列表
             this.TccTransactionSteps = steps ?? new List<ITccTransactionStep>();
             _serviceProvider = serviceProvider;
+
+            _transactionRepository = (IDistributedTransactionRepository<TccTransaction>)_serviceProvider.GetService(typeof(IDistributedTransactionRepository<>));
+            
             // 初始化日志
             _logger = loggerFactory.CreateLogger<TccTransaction>();
             
@@ -67,12 +71,12 @@ namespace CSDistributeTransaction.Core.Tcc
         {
             var step = _serviceProvider.GetService(typeof(TStep));
             if (step == null)
-                throw new System.Exception("Step不存在");
+                throw new ArgumentException("Step不存在");
 
             var target = step as TccTransactionStep<TState>;
 
             if (target == null)
-                throw new System.Exception("Step不存在");
+                throw new ArgumentException("Step不存在");
 
             target.State = state;
 

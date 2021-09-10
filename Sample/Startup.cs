@@ -32,11 +32,15 @@ namespace Sample
         {
             services.AddScoped<ReduceStockStep, ReduceStockStep>();
             services.AddScoped<PlaceOrderStep, PlaceOrderStep>();
+
+
             services.AddScoped(typeof(IStore<>),typeof(InMemeryStore<>));
 
             services.AddScoped<StockService,StockService>();
             services.AddScoped<TccTransactionOption, TccTransactionOption>();
             services.AddScoped<TccTransactionManager, TccTransactionManager>();
+
+
             services.AddLogging(config=> 
             {
                 config.AddConsole();

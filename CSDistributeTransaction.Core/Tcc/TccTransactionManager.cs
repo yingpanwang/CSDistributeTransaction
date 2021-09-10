@@ -23,7 +23,7 @@ namespace CSDistributeTransaction.Core.Tcc
             ILoggerFactory loggerFactory,
             IServiceProvider serviceProvider) 
         {
-            Options = options;
+            this.Options = options;
             _serviceProvider = serviceProvider;
             _loggerFactory = loggerFactory;
         }
